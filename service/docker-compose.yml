@@ -1,0 +1,68 @@
+services:
+  qwen-vllm:
+    image: vllm/vllm-openai:v0.22.1-x86_64-cu129-ubuntu2404
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      NVIDIA_VISIBLE_DEVICES: all
+    shm_size: "8gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command:
+      - Qwen/Qwen3-VL-4B-Instruct
+      - --served-model-name
+      - Qwen/Qwen3-VL-4B-Instruct
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --dtype
+      - float16
+      - --quantization
+      - bitsandbytes
+      - --load-format
+      - bitsandbytes
+      - --max-model-len
+      - "${VLLM_MAX_MODEL_LEN:-2048}"
+      - --max-num-seqs
+      - "1"
+      - --gpu-memory-utilization
+      - "${VLLM_GPU_MEMORY_UTILIZATION:-0.90}"
+      - --limit-mm-per-prompt
+      - '{"image": 1}'
+      - --trust-remote-code
+
+  api:
+    build: .
+    ports:
+      - "${APP_PORT:-8081}:8080"
+    environment:
+      QWEN_MODEL_ID: Qwen/Qwen3-VL-4B-Instruct
+      QWEN_OPENAI_BASE_URL: http://qwen-vllm:8000/v1
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      GENERATION_MAX_TOKENS: ${GENERATION_MAX_TOKENS:-180}
+      GENERATION_TEMPERATURE: ${GENERATION_TEMPERATURE:-0.2}
+      GENERATION_TOP_P: ${GENERATION_TOP_P:-0.8}
+      IMAGE_MAX_BYTES: ${IMAGE_MAX_BYTES:-10485760}
+      VLLM_HTTP_TIMEOUT_SECONDS: ${VLLM_HTTP_TIMEOUT_SECONDS:-120}
+    depends_on:
+      - qwen-vllm
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - api
+
+volumes:
+  hf-cache:
