@@ -10,7 +10,7 @@ import {
   Trash2,
   UploadCloud,
 } from "lucide-react";
-import { DragEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { DragEvent, FormEvent, useEffect, useState } from "react";
 
 import { ApiError, fetchReady, generateDescription } from "./api";
 
@@ -53,12 +53,12 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const parsedParams = useMemo(() => parseParamsText(paramsText), [paramsText]);
+  const parsedParams = parseParamsText(paramsText);
   const canSubmit = Boolean(
     imageFile && title.trim() && categoryName.trim() && parsedParams.ok && !isSubmitting,
   );
 
-  const refreshReady = useCallback(async () => {
+  const refreshReady = async () => {
     setReadyState("checking");
     try {
       const ready = await fetchReady();
@@ -66,11 +66,11 @@ function App() {
     } catch {
       setReadyState("error");
     }
-  }, []);
+  };
 
   useEffect(() => {
     void refreshReady();
-  }, [refreshReady]);
+  }, []);
 
   useEffect(() => {
     if (!imageFile) {
